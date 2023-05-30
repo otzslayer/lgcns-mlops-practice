@@ -5,11 +5,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 
 CAT_FEATURES = [
-    "Area Type",
-    "City",
-    "Furnishing Status",
-    "Tenant Preferred",
-    "Point of Contact",
+    "area_type",
+    "city",
+    "furnishing_status",
+    "tenant_preferred",
+    "point_of_contact",
 ]
 
 
@@ -51,11 +51,11 @@ def floor_extractor(df: pd.DataFrame, col: str) -> pd.DataFrame:
 # 3. 범주형 변수는 타겟 인코딩 적용
 preprocess_pipeline = ColumnTransformer(
     transformers=[
-        ("sqrt_transformation", FunctionTransformer(np.sqrt), ["Size"]),
+        ("sqrt_transformation", FunctionTransformer(np.sqrt), ["size"]),
         (
             "floor_extractor",
-            FunctionTransformer(floor_extractor, kw_args={"col": "Floor"}),
-            ["Floor"],
+            FunctionTransformer(floor_extractor, kw_args={"col": "floor"}),
+            ["floor"],
         ),
         ("target_encoding", TargetEncoder(), CAT_FEATURES),
     ],

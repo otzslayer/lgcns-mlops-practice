@@ -1,10 +1,16 @@
 import logging
 import logging.handlers
+import os
 import sys
 
+import matplotlib.pyplot as plt
+import mlflow
+import pandas as pd
+import seaborn as sns
 from rich.logging import RichHandler
+from sklearn.ensemble import GradientBoostingRegressor
 
-from .constants import LOG_FILEPATH
+from .constants import ARTIFACT_PATH, LOG_FILEPATH
 
 RICH_FORMAT = "| %(filename)s:%(lineno)s\t| %(message)s"
 FILE_HANDLER_FORMAT = (
@@ -72,3 +78,36 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         "Unexpected exception", exc_info=(exc_type, exc_value, exc_traceback)
     )
     logger.error("Unexpected exception caught!")
+
+
+def log_feature_importance(
+    train: pd.DataFrame, model: GradientBoostingRegressor
+) -> None:
+    """Scikit-learn 기반 모델의 피처 중요도를 차트로 저장합니다.
+
+    Args:
+        train (pd.DataFrame): 학습 데이터
+        model (GradientBoostingRegressor): 모델
+    """
+    feature_imp = (
+        pd.DataFrame(
+            model.feature_importances_,
+            index=train.columns,
+            columns=["Importance"],
+        )
+        .sort_values(by="Importance", ascending=False)
+        .reset_index(drop=False)
+    )
+
+    plt.figure(figsize=(12, 8))
+    sns.barplot(
+        data=feature_imp,
+        x="Importance",
+        y="index",
+    ).set_title("Feature Importance")
+
+    plt.savefig(
+        os.path.join(ARTIFACT_PATH, "feature_importance.png"),
+        bbox_inches="tight",
+    )
+    plt.close()

@@ -8,9 +8,7 @@ def rmse(y, y_pred):
 
 
 def rmse_score(y, y_pred):
-    score = rmse(y, y_pred)
-    print("RMSE score: {:.4f}".format(score))
-    return score
+    return rmse(y, y_pred)
 
 
 def rmsle_cv(model, X_train, y_train):
@@ -29,10 +27,4 @@ def rmsle_cv(model, X_train, y_train):
 
 
 def rmse_cv_score(model, X_train, y_train):
-    score = rmsle_cv(model, X_train, y_train)
-    print(
-        "Cross-Validation RMSE score: {:.4f} (std = {:.4f})".format(
-            score.mean(), score.std()
-        )
-    )
-    return score
+    return rmsle_cv(model, X_train, y_train)

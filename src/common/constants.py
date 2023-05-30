@@ -8,3 +8,6 @@ LOG_FILEPATH: str = os.path.join(
 DATA_PATH: str = os.path.join(
     pathlib.Path(__file__).parent.parent.parent.absolute(), "data"
 )
+ARTIFACT_PATH: str = os.path.join(
+    pathlib.Path(__file__).parent.parent.parent.absolute(), "artifacts"
+)
