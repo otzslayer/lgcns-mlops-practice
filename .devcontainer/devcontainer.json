@@ -1,0 +1,28 @@
+{
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		"args": {
+			"VARIANT": "3.9-bullseye"
+		}
+	},
+	"waitFor": "onCreateCommand",
+	"updateContentCommand": "",
+	"postCreateCommand": "",
+	"postStartCommand" : "",
+	"postAttachCommand": "pipenv install --dev",
+	"forwardPorts": [3000],
+	"portsAttributes": {
+	  "3000": {
+		"label": "bentoml",
+		"onAutoForward": "openPreview"
+	  }
+	},
+	"customizations": {
+	  "vscode": {
+		"extensions": [
+		  "ms-python.python"
+		]
+	  }
+	}
+  }
