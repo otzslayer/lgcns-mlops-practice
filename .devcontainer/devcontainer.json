@@ -11,11 +11,15 @@
 	"postCreateCommand": "",
 	"postStartCommand" : "",
 	"postAttachCommand": "pipenv install --dev",
-	"forwardPorts": [3000],
+	"forwardPorts": [3000, 5000],
 	"portsAttributes": {
 	  "3000": {
 		"label": "bentoml",
 		"onAutoForward": "openPreview"
+	  },
+	  "5000":{
+		"label": "mlflow",
+		"onAutoForward": "openBrowser"
 	  }
 	},
 	"customizations": {
