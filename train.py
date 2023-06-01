@@ -33,6 +33,14 @@ if __name__ == "__main__":
     y = np.log1p(train_df["rent"])
     X = preprocess_pipeline.fit_transform(X=_X, y=y)
 
+    # Data storage - 피처 데이터 저장
+    if not os.path.exists(os.path.join(DATA_PATH, "storage")):
+        os.makedirs(os.path.join(DATA_PATH, "storage"))
+    X.assign(rent=y).to_csv(
+        os.path.join(DATA_PATH, "storage", "house_rent_train_features.csv"),
+        index=False,
+    )
+
     logger.debug("Run preprocessing pipeline")
 
     params_candidates = {
