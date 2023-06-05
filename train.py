@@ -2,6 +2,7 @@
 import os
 import sys
 import warnings
+from distutils.dir_util import copy_tree
 
 import bentoml
 import mlflow
@@ -117,6 +118,9 @@ if __name__ == "__main__":
     logger.info(f"Best Hyper-params: {best_params}")
 
     best_model_uri = f"{best_run.info.artifact_uri}/model"
+
+    # 베스트 모델을 아티팩트 폴더에 복사
+    copy_tree(best_model_uri.replace("file://", ""), ARTIFACT_PATH)
 
     bentoml.sklearn.save_model(
         name="house_rent",
