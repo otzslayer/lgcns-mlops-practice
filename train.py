@@ -2,6 +2,7 @@
 import os
 import sys
 import warnings
+from distutils.dir_util import copy_tree
 
 import bentoml
 import mlflow
@@ -32,6 +33,14 @@ if __name__ == "__main__":
     _X = train_df.drop(["rent", "area_locality", "posted_on"], axis=1)
     y = np.log1p(train_df["rent"])
     X = preprocess_pipeline.fit_transform(X=_X, y=y)
+
+    # Data storage - 피처 데이터 저장
+    if not os.path.exists(os.path.join(DATA_PATH, "storage")):
+        os.makedirs(os.path.join(DATA_PATH, "storage"))
+    X.assign(rent=y).to_csv(
+        os.path.join(DATA_PATH, "storage", "house_rent_train_features.csv"),
+        index=False,
+    )
 
     logger.debug("Run preprocessing pipeline")
 
@@ -109,6 +118,9 @@ if __name__ == "__main__":
     logger.info(f"Best Hyper-params: {best_params}")
 
     best_model_uri = f"{best_run.info.artifact_uri}/model"
+
+    # 베스트 모델을 아티팩트 폴더에 복사
+    copy_tree(best_model_uri.replace("file://", ""), ARTIFACT_PATH)
 
     bentoml.sklearn.save_model(
         name="house_rent",

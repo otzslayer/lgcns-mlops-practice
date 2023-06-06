@@ -12,8 +12,10 @@ ARTIFACT_PATH: str = os.path.join(
     pathlib.Path(__file__).parent.parent.parent.absolute(), "artifacts"
 )
 
-if not os.path.exists(LOG_FILEPATH):
-   os.makedirs(LOG_FILEPATH)
+PREDICTION_PATH: str = os.path.join(
+    pathlib.Path(__file__).parent.parent.parent.absolute(), "predictions"
+)
 
-if not os.path.exists(ARTIFACT_PATH):
-   os.makedirs(ARTIFACT_PATH)
+for path in [LOG_FILEPATH, ARTIFACT_PATH, PREDICTION_PATH]:
+    if not os.path.exists(path):
+        os.makedirs(path)
