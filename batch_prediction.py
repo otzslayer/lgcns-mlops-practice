@@ -26,7 +26,13 @@ if __name__ == "__main__":
 
     X = test.drop(["id", "rent"], axis=1, inplace=False)
     id_ = test["id"].to_numpy()
-    # y = test["rent"].to_numpy()
+    y = test["rent"].to_numpy()
+
+    # 테스트 데이터에 대한 피처 데이터 저장
+    model["preprocessor"].transform(X=X).to_csv(
+        os.path.join(DATA_PATH, "storage", "house_rent_test_feature.csv"),
+        index=False,
+    )
 
     pred_df = pd.DataFrame({"user": id_, "rent": np.expm1(model.predict(X))})
 
