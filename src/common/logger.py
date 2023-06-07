@@ -4,7 +4,6 @@ import os
 import sys
 
 import matplotlib.pyplot as plt
-import mlflow
 import pandas as pd
 import seaborn as sns
 from rich.logging import RichHandler

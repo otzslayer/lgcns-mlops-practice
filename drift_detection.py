@@ -1,132 +1,128 @@
 import os
 import sys
-import joblib
 import warnings
-import argparse
 from datetime import datetime
 
+import joblib
 import numpy as np
 import pandas as pd
+from deepchecks.core.suite import SuiteResult
 from deepchecks.tabular import Dataset
-from deepchecks.tabular.suites import train_test_validation, model_evaluation
+from deepchecks.tabular.suites import model_evaluation, train_test_validation
 
 from src.common.constants import (
     ARTIFACT_PATH,
     DATA_PATH,
+    DRIFT_DETECTION_PATH,
     LOG_FILEPATH,
 )
 from src.common.logger import handle_exception, set_logger
 from src.preprocess import CAT_FEATURES, preprocess_pipeline
-
 
 logger = set_logger(os.path.join(LOG_FILEPATH, "logs.log"))
 sys.excepthook = handle_exception
 warnings.filterwarnings(action="ignore")
 
 
-def main(detect_type: str):
-    DATE = datetime.now().strftime("%Y%m%d")
-    model = joblib.load(os.path.join(ARTIFACT_PATH, "model.joblib"))
-    label = "rent"
+DATE = datetime.now().strftime("%Y%m%d")
+LABEL_NAME = "rent"
+model = joblib.load(os.path.join(ARTIFACT_PATH, "model.pkl"))
 
-    if detect_type[0] == 'type01':
-        train_df = pd.read_csv(
-            os.path.join(DATA_PATH, "house_rent_train.csv"), 
-            usecols=lambda x: x not in ["area_locality", "posted_on", "id"]
-            )
-        test_df = pd.read_csv(
-            os.path.join(DATA_PATH, "house_rent_test.csv"), 
-            usecols=lambda x: x not in ["area_locality", "posted_on", "id"]
-            )
-        
-        logger.debug(f"{train_df.info()}")
-        logger.debug(f"{test_df.info()}")
 
-        train_ds = Dataset(
-            train_df, 
-            label=label,
-            cat_features=CAT_FEATURES,
-            )
-        test_ds = Dataset(
-            test_df, 
-            label=label,
-            cat_features=CAT_FEATURES,
-            )
-        validation_suite = train_test_validation()
-        suite_result = validation_suite.run(train_ds, test_ds)
+def load_data(filename: str) -> pd.DataFrame:
+    return pd.read_csv(
+        os.path.join(DATA_PATH, filename),
+        usecols=lambda x: x not in ["area_locality", "posted_on", "id"],
+    )
 
-        logger.info(f"Data Validaton Done")
 
-        save_path = os.path.join(
-            ARTIFACT_PATH, 
-            f"{DATE}_drift_detection_type01.html"
-            )
-        logger.info(suite_result.save_as_html(save_path))
-
+def log_failed_check_info(suite_result: SuiteResult):
+    for result in suite_result.get_not_passed_checks():
         logger.info(
-            "Result can be found in the following path:\n" f"{save_path}"
-        )
-    elif detect_type[0] == 'type02':
-        train_df = pd.read_csv(
-            os.path.join(DATA_PATH, "house_rent_train.csv"), 
-            usecols=lambda x: x not in ["area_locality", "posted_on", "id"]
-            )
-        test_df = pd.read_csv(
-            os.path.join(DATA_PATH, "house_rent_test.csv"), 
-            usecols=lambda x: x not in ["area_locality", "posted_on", "id"]
-            )
-        
-        _X_train = train_df.drop([label], axis=1)
-        y_train = np.log1p(train_df[label])
-        X_train = preprocess_pipeline.fit_transform(X=_X_train, y=y_train)
-
-        _X_test = test_df.drop([label], axis=1)
-        y_test = np.log1p(test_df[label])
-        X_test = preprocess_pipeline.fit_transform(X=_X_test, y=y_test)
-        
-        train_ds = Dataset(
-            X_train,
-            label=y_train,
-            cat_features=CAT_FEATURES,
-            )
-        test_ds = Dataset(
-            X_test,
-            label=y_test,
-            cat_features=CAT_FEATURES,
-            )
-        evaluation_suite = model_evaluation()
-        suite_result = evaluation_suite.run(train_ds, test_ds, model)
-        
-        logger.info(f"Model Validaton Done")
-
-        save_path = os.path.join(
-            ARTIFACT_PATH, 
-            f"{DATE}_drift_detection_type02.html"
-            )
-        suite_result.save_as_html(save_path, show_additional_outputs=False)
-
-        logger.info(
-            "Result can be found in the following path:\n" f"{save_path}"
+            "The following test failed!\n"
+            f"{result.header}: {result.conditions_results[0].details}"
         )
 
-    else:
-        logger.warning(f"Detection Type `{detect_type}` is not valid!")
+
+def data_drift_detection(
+    train_df: pd.DataFrame, new_df: pd.DataFrame, label: str, cat_features: str
+) -> None:
+    train_set = Dataset(train_df, label=label, cat_features=cat_features)
+    new_set = Dataset(new_df, label=label, cat_features=cat_features)
+
+    validation_suite = train_test_validation()
+    suite_result = validation_suite.run(train_set, new_set)
+
+    log_failed_check_info(suite_result=suite_result)
+
+    suite_result.save_as_html(
+        os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_data_drift.html")
+    )
 
 
-def get_arguments():
-    """
-    arguments 파싱 함수
-    """ 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        nargs='+',
-        dest='detect_type',
-        help=': `type01` for data validation | `type02` for model validation'
+def model_drift_detection(
+    train_df: pd.DataFrame, new_df: pd.DataFrame, label: str, cat_features: str
+) -> None:
+    def get_xy(df: pd.DataFrame):
+        y = np.log1p(df[LABEL_NAME])
+        x = preprocess_pipeline.fit_transform(
+            X=df.drop([LABEL_NAME], axis=1), y=y
         )
-    detect_type = parser.parse_args().detect_type
-    return detect_type
+
+        return x, y
+
+    x_train, y_train = get_xy(train_df)
+    x_new, y_new = get_xy(new_df)
+
+    train_set = Dataset(
+        x_train,
+        label=y_train,
+        cat_features=CAT_FEATURES,
+    )
+    new_set = Dataset(
+        x_new,
+        label=y_new,
+        cat_features=CAT_FEATURES,
+    )
+
+    evaluation_suite = model_evaluation()
+    suite_result = evaluation_suite.run(train_set, new_set, model["regr"])
+
+    log_failed_check_info(suite_result=suite_result)
+
+    suite_result.save_as_html(
+        os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_model_drift.html")
+    )
 
 
-if __name__ == '__main__':
-    detect_type = get_arguments()
-    main(detect_type)
+def main():
+    train_df = load_data(filename="house_rent_train.csv")
+    new_df = load_data(filename="house_rent_new.csv")
+
+    logger.debug(f"{train_df.info()}")
+    logger.debug(f"{new_df.info()}")
+
+    logger.info("Detect data drift")
+    data_drift_detection(
+        train_df=train_df,
+        new_df=new_df,
+        label=LABEL_NAME,
+        cat_features=CAT_FEATURES,
+    )
+
+    logger.info("Detect model drift")
+    model_drift_detection(
+        train_df=train_df,
+        new_df=new_df,
+        label=LABEL_NAME,
+        cat_features=CAT_FEATURES,
+    )
+
+    logger.info(
+        "Detection results can be found in the following path:\n"
+        f"{DRIFT_DETECTION_PATH}"
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -16,6 +16,13 @@ PREDICTION_PATH: str = os.path.join(
     pathlib.Path(__file__).parent.parent.parent.absolute(), "predictions"
 )
 
-for path in [LOG_FILEPATH, ARTIFACT_PATH, PREDICTION_PATH]:
+DRIFT_DETECTION_PATH = os.path.join(ARTIFACT_PATH, "drift_detection")
+
+for path in [
+    LOG_FILEPATH,
+    ARTIFACT_PATH,
+    PREDICTION_PATH,
+    DRIFT_DETECTION_PATH,
+]:
     if not os.path.exists(path):
         os.makedirs(path)
