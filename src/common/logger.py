@@ -20,7 +20,7 @@ FILE_HANDLER_FORMAT = (
 def get_file_handler(
     log_path: str = LOG_FILEPATH,
 ) -> logging.handlers.TimedRotatingFileHandler:
-    """로그 저장 파일 핸드러를 설정하는 함수
+    """로그 저장 파일 핸들러를 설정하는 함수
 
     Args:
         log_path (str, optional): 로그 저장 파일명. Defaults to LOG_FILEPATH.
