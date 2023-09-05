@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import warnings
@@ -6,6 +7,7 @@ from datetime import datetime
 import joblib
 import numpy as np
 import pandas as pd
+from deepchecks import SuiteResult
 from deepchecks.core.suite import SuiteResult
 from deepchecks.tabular import Dataset
 from deepchecks.tabular.suites import model_evaluation, train_test_validation
@@ -44,8 +46,27 @@ def log_failed_check_info(suite_result: SuiteResult):
         )
 
 
+def get_drift_test(suite_result: SuiteResult, test_name: str) -> dict:
+    result_json = json.loads(suite_result.to_json())
+    test_result = [
+        x
+        for x in result_json.get("results")
+        if x.get("check").get("name") == test_name
+    ][0]
+    conditions_results = test_result.get("conditions_results")[0]
+    value = test_result.get("value").get("Drift score").get("value")
+
+    conditions_results["value"] = value
+
+    return conditions_results
+
+
 def data_drift_detection(
-    train_df: pd.DataFrame, new_df: pd.DataFrame, label: str, cat_features: str
+    train_df: pd.DataFrame,
+    new_df: pd.DataFrame,
+    label: str,
+    cat_features: str,
+    save_as_html: bool = False,
 ) -> None:
     train_set = Dataset(train_df, label=label, cat_features=cat_features)
     new_set = Dataset(new_df, label=label, cat_features=cat_features)
@@ -55,19 +76,23 @@ def data_drift_detection(
 
     log_failed_check_info(suite_result=suite_result)
 
-    suite_result.save_as_html(
-        os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_data_drift.html")
-    )
+    if save_as_html:
+        suite_result.save_as_html(
+            os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_data_drift.html")
+        )
 
 
 def model_drift_detection(
-    train_df: pd.DataFrame, new_df: pd.DataFrame, label: str, cat_features: str
+    train_df: pd.DataFrame,
+    new_df: pd.DataFrame,
+    label: str,
+    cat_features: str,
+    save_as_json: bool = True,
+    save_as_html: bool = False,
 ) -> None:
     def get_xy(df: pd.DataFrame):
-        y = np.log1p(df[LABEL_NAME])
-        x = preprocess_pipeline.fit_transform(
-            X=df.drop([LABEL_NAME], axis=1), y=y
-        )
+        y = np.log1p(df[label])
+        x = preprocess_pipeline.fit_transform(X=df.drop([label], axis=1), y=y)
 
         return x, y
 
@@ -77,12 +102,12 @@ def model_drift_detection(
     train_set = Dataset(
         x_train,
         label=y_train,
-        cat_features=CAT_FEATURES,
+        cat_features=cat_features,
     )
     new_set = Dataset(
         x_new,
         label=y_new,
-        cat_features=CAT_FEATURES,
+        cat_features=cat_features,
     )
 
     evaluation_suite = model_evaluation()
@@ -90,9 +115,20 @@ def model_drift_detection(
 
     log_failed_check_info(suite_result=suite_result)
 
-    suite_result.save_as_html(
-        os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_model_drift.html")
-    )
+    # Prediction Drift 정보만 저장
+    if save_as_json:
+        prediction_drift = get_drift_test(
+            suite_result=suite_result, test_name="Prediction Drift"
+        )
+        json_obj = json.dumps(prediction_drift, indent=4)
+
+        with open("./prediction_drift.json", "w") as file:
+            file.write(json_obj)
+
+    if save_as_html:
+        suite_result.save_as_html(
+            os.path.join(DRIFT_DETECTION_PATH, f"{DATE}_model_drift.html")
+        )
 
 
 def main():
@@ -108,6 +144,7 @@ def main():
         new_df=new_df,
         label=LABEL_NAME,
         cat_features=CAT_FEATURES,
+        save_as_html=True,
     )
 
     logger.info("Detect model drift")
@@ -116,6 +153,8 @@ def main():
         new_df=new_df,
         label=LABEL_NAME,
         cat_features=CAT_FEATURES,
+        save_as_json=True,
+        save_as_html=True,
     )
 
     logger.info(

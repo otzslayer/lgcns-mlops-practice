@@ -1,0 +1,6 @@
+{
+    "Status": "FAIL",
+    "Condition": "Prediction drift score < 0.15",
+    "More Info": "Found model prediction Kolmogorov-Smirnov drift score of 0.41",
+    "value": 0.4070871028835895
+}
