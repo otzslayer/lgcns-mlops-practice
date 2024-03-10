@@ -1,0 +1,1 @@
+2 23 * * * sh /workspaces/lgcns-mlops-practice/batch_prediction.sh
